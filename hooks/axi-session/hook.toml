@@ -1,0 +1,29 @@
+description = "Session-start context for the AXI command-line tools."
+script = "axi_session_start.py"
+runner = "python3 -I"
+
+[claude]
+event = "SessionStart"
+args = "--format claude"
+timeout = 20
+
+[codex]
+event = "SessionStart"
+args = "--format codex"
+timeout = 20
+extra = { additionalContextLimit = 16000 }
+
+[cursor]
+event = "sessionStart"
+args = "--format cursor"
+
+[antigravity]
+event = "SessionStart"
+args = "--format antigravity"
+timeout = 20
+group = "axi-session"
+
+[pi]
+event = "before_agent_start"
+args = "--format plain"
+timeout = 20

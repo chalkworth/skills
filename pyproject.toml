@@ -1,0 +1,42 @@
+[project]
+name = "chalk-skills"
+version = "0.1.0"
+description = "Vendor agent skills and their hooks into a repository, for every coding-agent CLI"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+chalk-skills = "chalk_skills.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.14"]
+# What the skills' own scripts import; their tests run with this group.
+skills = ["numpy", "scipy", "sympy==1.14.0", "mpmath", "pandas", "pydoe==1.5.0", "simpy==4.1.2"]
+
+[tool.uv]
+default-groups = ["dev", "skills"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP", "PLR0915", "PLR0912", "ERA001"]
+
+[tool.ruff.lint.pylint]
+max-statements = 80
+max-branches = 20
+
+[tool.ruff.lint.per-file-ignores]
+# Imported skill scripts: one long CLI entry point each.
+"packs/experiments/designing-experiments/scripts/stats.py" = ["PLR0915", "UP042"]

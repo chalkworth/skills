@@ -1,0 +1,8 @@
+# The skills this repository publishes. `chalk-skills vendor` reads it from a source repository.
+visibility = "public"
+
+[packs.experiments]
+description = "Measured comparisons, experiment layouts, simulation and derivation checks"
+
+[packs.docs]
+description = "Diagrams and documents in Markdown"
