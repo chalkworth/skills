@@ -6,8 +6,10 @@ it with its own `--format`, since their output contracts differ:
 
 - gh-axi's live summary (open issues and PRs, its commands) is added only when the session's repo has a github.com
   remote. Elsewhere it would always say "0 open" and cost a GitHub round-trip.
-- chrome-devtools-axi's, lavish-axi's and obsidian-axi's summaries are added whenever the tool is installed, so
-  agents know to use them.
+- chrome-devtools-axi's and lavish-axi's summaries are added whenever the tool is installed, so agents know to use
+  them.
+- A repository can leave summaries out with `.agents/axi-session.toml` at its root: `skip = ["lavish-axi"]`. A
+  skipped tool is not run.
 - Once a day, installed AXI packages are compared with the npm registry, and the person is told when one is behind.
   Version skew has broken these tools before.
 
@@ -26,20 +28,18 @@ import shutil
 import subprocess
 import sys
 import time
+import tomllib
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 GITHUB_TOOL = "gh-axi"
-SUMMARY_TOOLS: tuple[str, ...] = (
-    "chrome-devtools-axi",
-    "lavish-axi",
-    "obsidian-axi",
-)  # summarised when installed
+SUMMARY_TOOLS: tuple[str, ...] = ("chrome-devtools-axi", "lavish-axi")  # summarised when installed
 VERSION_CHECKED_PACKAGES: tuple[str, ...] = (GITHUB_TOOL, *SUMMARY_TOOLS, "quota-axi", "tasks-axi")
 FORMATS: tuple[str, ...] = ("claude", "codex", "cursor", "antigravity", "plain")
 GITHUB_HOST = "github.com"
+REPO_CONFIG = Path(".agents") / "axi-session.toml"
 TOOL_TIMEOUT_SECONDS = 8
 REGISTRY_URL = "https://registry.npmjs.org/{package}/latest"
 REGISTRY_TIMEOUT_SECONDS = 3
@@ -82,6 +82,29 @@ def has_github_remote(working_directory: str) -> bool:
     except (OSError, subprocess.SubprocessError):
         return False
     return completed.returncode == 0 and GITHUB_HOST in completed.stdout
+
+
+def skipped_tools(working_directory: str) -> set[str]:
+    """The tools the repository's `.agents/axi-session.toml` lists under `skip`, or none."""
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=working_directory,
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    if completed.returncode != 0:
+        return set()
+    try:
+        with (Path(completed.stdout.strip()) / REPO_CONFIG).open("rb") as config:
+            skip = tomllib.load(config).get("skip", [])
+    except (OSError, tomllib.TOMLDecodeError):
+        return set()
+    return {tool for tool in skip if isinstance(tool, str)} if isinstance(skip, list) else set()
 
 
 def installed_version(package: str) -> str | None:
@@ -162,6 +185,8 @@ def gather(working_directory: str, now: float) -> tuple[list[str], list[str]]:
     tools = [tool for tool in SUMMARY_TOOLS if shutil.which(tool)]
     if shutil.which(GITHUB_TOOL) and has_github_remote(working_directory):
         tools.insert(0, GITHUB_TOOL)
+    skipped = skipped_tools(working_directory)
+    tools = [tool for tool in tools if tool not in skipped]
     with ThreadPoolExecutor(max_workers=len(tools) or 1) as executor:
         summaries = list(executor.map(lambda tool: run_tool(tool, working_directory), tools))
     context_sections = [summary for summary in summaries if summary]

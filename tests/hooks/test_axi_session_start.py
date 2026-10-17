@@ -77,13 +77,39 @@ def test_github_summary_only_in_repos_with_a_github_remote(hook, tmp_path, monke
 
 
 def test_every_installed_summary_tool_is_summarised_in_order(hook, tmp_path, monkeypatch) -> None:
-    installed = {"gh-axi": "1", "chrome-devtools-axi": "1", "lavish-axi": "1", "obsidian-axi": "1"}
+    installed = {"gh-axi": "1", "chrome-devtools-axi": "1", "lavish-axi": "1"}
     _stub_tools(hook, monkeypatch, installed, latest=installed)
     repo = _repo(tmp_path / "repo", "git@github.com:example/repo.git")
 
     context = _claude(hook, repo, NOW)["hookSpecificOutput"]["additionalContext"]
 
     assert context.split("\n\n") == [f"{tool} summary" for tool in installed]
+
+
+def test_a_repository_can_skip_summaries(hook, tmp_path, monkeypatch) -> None:
+    installed = {"gh-axi": "1", "chrome-devtools-axi": "1", "lavish-axi": "1"}
+    _stub_tools(hook, monkeypatch, installed, latest=installed)
+    ran: list[str] = []
+    monkeypatch.setattr(
+        hook, "run_tool", lambda executable, working_directory: ran.append(executable) or "s"
+    )
+    repo = _repo(tmp_path / "repo", "git@github.com:example/repo.git")
+    (repo / ".agents").mkdir()
+    (repo / ".agents" / "axi-session.toml").write_text('skip = ["lavish-axi", "gh-axi"]\n')
+    subdirectory = repo / "src"
+    subdirectory.mkdir()
+
+    hook.gather(str(subdirectory), NOW)
+
+    assert ran == ["chrome-devtools-axi"]
+
+
+@pytest.mark.parametrize("config", ["skip = [", 'skip = "lavish-axi"', "skip = [1]"])
+def test_a_bad_repository_config_skips_nothing(hook, tmp_path, monkeypatch, config) -> None:
+    repo = _repo(tmp_path / "repo", None)
+    (repo / ".agents").mkdir()
+    (repo / ".agents" / "axi-session.toml").write_text(config + "\n")
+    assert hook.skipped_tools(str(repo)) == set()
 
 
 def test_outdated_packages_go_to_the_person_once_a_day(hook, tmp_path, monkeypatch) -> None:

@@ -79,6 +79,10 @@ timeout and extra keys. Vendoring copies the script to `.agents/hooks/<id>/` and
 - Antigravity: `.agents/hooks.json`, in a group named after the hook.
 - Pi: `.pi/extensions/<id>.ts`, generated from a template.
 
+To leave an AXI tool out of the session-start context in one repository, list it in
+`.agents/axi-session.toml` at the repository root: `skip = ["lavish-axi"]`. The hook then doesn't
+run that tool.
+
 Entries are merged. The tool owns an entry when its command string is in the lockfile, and
 leaves every other entry, key and the key order alone. Removing a hook from the config removes
 its entries, and any containers or files the tool created. With `hooks --global`, the hook ids and
