@@ -54,6 +54,7 @@ def _stub_tools(
     )
     monkeypatch.setattr(hook, "installed_version", lambda package: installed.get(package))
     monkeypatch.setattr(hook, "fetch_latest_version", lambda package: latest.get(package))
+    monkeypatch.setattr(hook, "chrome_launchable", lambda environment, platform: True)
 
 
 def _claude(hook: ModuleType, working_directory: Path, now: float) -> dict:
@@ -194,3 +195,52 @@ def test_hook_never_fails_and_is_silent_without_tools(tmp_path, output_format) -
     )
     assert completed.returncode == 0
     assert completed.stdout == ""
+
+
+def test_without_a_browser_chrome_is_left_out_and_the_person_told(hook, tmp_path, monkeypatch):
+    installed = {"chrome-devtools-axi": "1.0.0", "lavish-axi": "1.0.0"}
+    _stub_tools(hook, monkeypatch, installed=installed, latest=installed)
+    monkeypatch.setattr(hook, "chrome_launchable", lambda environment, platform: False)
+    output = _claude(hook, _repo(tmp_path / "repo", None), NOW)
+    assert output["hookSpecificOutput"]["additionalContext"] == "lavish-axi summary"
+    assert "CHROME_DEVTOOLS_AXI_EXECUTABLE_PATH" in output["systemMessage"]
+
+
+def test_a_skipped_chrome_tool_is_not_checked(hook, tmp_path, monkeypatch):
+    _stub_tools(hook, monkeypatch, installed={"chrome-devtools-axi": "1.0.0"}, latest={})
+    monkeypatch.setattr(hook, "chrome_launchable", lambda environment, platform: False)
+    repo = _repo(tmp_path / "repo", None)
+    (repo / ".agents").mkdir()
+    (repo / ".agents" / "axi-session.toml").write_text('skip = ["chrome-devtools-axi"]\n')
+    assert _claude(hook, repo, NOW) == {}
+
+
+@pytest.mark.parametrize(
+    ("environment", "expected"),
+    [
+        ({"CHROME_DEVTOOLS_AXI_BROWSER_URL": "http://127.0.0.1:9222"}, True),
+        ({"CHROME_DEVTOOLS_AXI_AUTO_CONNECT": "1"}, True),
+        ({"CHROME_DEVTOOLS_AXI_CHANNEL": "canary"}, True),
+        ({"CHROME_DEVTOOLS_AXI_EXECUTABLE_PATH": "/nonexistent/chrome"}, False),
+        ({}, False),
+    ],
+)
+def test_chrome_launchable_reads_the_tool_settings(hook, monkeypatch, environment, expected):
+    monkeypatch.setattr(hook, "STABLE_CHROME", {"linux": ("/nonexistent/google-chrome",)})
+    assert hook.chrome_launchable(environment, "linux") is expected
+
+
+def test_an_executable_path_or_installed_chrome_counts(hook, tmp_path, monkeypatch):
+    chrome = tmp_path / "chrome"
+    chrome.write_text("#!/bin/sh\n")
+    chrome.chmod(0o755)
+    assert hook.chrome_launchable({"CHROME_DEVTOOLS_AXI_EXECUTABLE_PATH": str(chrome)}, "linux")
+    monkeypatch.setattr(hook, "STABLE_CHROME", {"linux": (str(chrome),)})
+    assert hook.chrome_launchable({}, "linux")
+    assert hook.chrome_launchable({}, "win32")  # an unknown platform is not judged
+
+
+def test_notices_join_the_version_notice(hook, monkeypatch):
+    monkeypatch.setattr(hook, "update_notice", lambda outdated: "N")
+    output = json.loads(hook.render("claude", [], ["x 1 → 2"], ["B"]))
+    assert output == {"systemMessage": "N B"}

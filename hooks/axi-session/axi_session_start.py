@@ -12,6 +12,8 @@ it with its own `--format`, since their output contracts differ:
   skipped tool is not run.
 - Once a day, installed AXI packages are compared with the npm registry, and the person is told when one is behind.
   Version skew has broken these tools before.
+- chrome-devtools-axi launches an installed Google Chrome unless told to use another browser. When it has none to
+  launch, its summary is left out (the agent could not use it) and the person is told how to point it at one.
 
 The hook always exits 0 and stays silent on any error, so it never interrupts work.
 
@@ -44,6 +46,16 @@ TOOL_TIMEOUT_SECONDS = 8
 REGISTRY_URL = "https://registry.npmjs.org/{package}/latest"
 REGISTRY_TIMEOUT_SECONDS = 3
 VERSION_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
+CHROME_TOOL = "chrome-devtools-axi"
+# Where chrome-devtools-axi's default (stable channel) launch finds Google Chrome.
+STABLE_CHROME = {
+    "linux": ("/opt/google/chrome/chrome",),
+    "darwin": ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",),
+}
+NO_BROWSER_NOTICE = (
+    "chrome-devtools-axi has no Chrome to launch, so agents were not told about it. Install Google "
+    "Chrome, or set CHROME_DEVTOOLS_AXI_EXECUTABLE_PATH to a Chrome or Chromium executable."
+)
 CACHE_PATH = (
     Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
     / "chalk-skills"
@@ -105,6 +117,23 @@ def skipped_tools(working_directory: str) -> set[str]:
     except (OSError, tomllib.TOMLDecodeError):
         return set()
     return {tool for tool in skip if isinstance(tool, str)} if isinstance(skip, list) else set()
+
+
+def chrome_launchable(environment: dict[str, str], platform: str) -> bool:
+    """Whether chrome-devtools-axi has a browser: one it is told to use or attach to, or stable Chrome.
+    A platform or channel this hook does not know is given the benefit of the doubt."""
+    if environment.get("CHROME_DEVTOOLS_AXI_BROWSER_URL") or environment.get(
+        "CHROME_DEVTOOLS_AXI_AUTO_CONNECT"
+    ):
+        return True
+    executable = environment.get("CHROME_DEVTOOLS_AXI_EXECUTABLE_PATH")
+    if executable:
+        return os.access(executable, os.X_OK)
+    channel = environment.get("CHROME_DEVTOOLS_AXI_CHANNEL", "stable").strip() or "stable"
+    known = STABLE_CHROME.get("linux" if platform.startswith("linux") else platform)
+    if channel != "stable" or known is None:
+        return True
+    return any(os.access(path, os.X_OK) for path in known)
 
 
 def installed_version(package: str) -> str | None:
@@ -180,13 +209,18 @@ def outdated_packages(installed: dict[str, str], latest: dict[str, str]) -> list
     return outdated
 
 
-def gather(working_directory: str, now: float) -> tuple[list[str], list[str]]:
-    """The tool summaries for the agent, in a fixed order, and the outdated packages for the person."""
+def gather(working_directory: str, now: float) -> tuple[list[str], list[str], list[str]]:
+    """The tool summaries for the agent, in a fixed order, the outdated packages for the person, and
+    any other notices for the person."""
     tools = [tool for tool in SUMMARY_TOOLS if shutil.which(tool)]
     if shutil.which(GITHUB_TOOL) and has_github_remote(working_directory):
         tools.insert(0, GITHUB_TOOL)
     skipped = skipped_tools(working_directory)
     tools = [tool for tool in tools if tool not in skipped]
+    notices: list[str] = []
+    if CHROME_TOOL in tools and not chrome_launchable(dict(os.environ), sys.platform):
+        tools.remove(CHROME_TOOL)
+        notices.append(NO_BROWSER_NOTICE)
     with ThreadPoolExecutor(max_workers=len(tools) or 1) as executor:
         summaries = list(executor.map(lambda tool: run_tool(tool, working_directory), tools))
     context_sections = [summary for summary in summaries if summary]
@@ -199,7 +233,7 @@ def gather(working_directory: str, now: float) -> tuple[list[str], list[str]]:
     outdated: list[str] = []
     if installed:
         outdated = outdated_packages(installed, latest_versions(list(installed), now))
-    return context_sections, outdated
+    return context_sections, outdated, notices
 
 
 def update_notice(outdated: list[str]) -> str:
@@ -212,10 +246,15 @@ def update_notice(outdated: list[str]) -> str:
     )
 
 
-def render(output_format: str, context_sections: list[str], outdated: list[str]) -> str:
+def render(
+    output_format: str,
+    context_sections: list[str],
+    outdated: list[str],
+    notices: list[str] | None = None,
+) -> str:
     """The hook's stdout for one CLI: '' when there is nothing to say."""
     context = "\n\n".join(context_sections)
-    notice = update_notice(outdated) if outdated else ""
+    notice = " ".join([update_notice(outdated)] * bool(outdated) + list(notices or []))
     if output_format == "claude":
         output: dict = {}
         if context:
