@@ -6,3 +6,6 @@ description = "Measured comparisons, experiment layouts, simulation and derivati
 
 [packs.docs]
 description = "Diagrams and documents in Markdown"
+
+[packs.productivity]
+description = "Working across sessions, such as handing a conversation over to a fresh agent"

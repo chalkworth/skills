@@ -1,0 +1,8 @@
+{
+  "scope": "Vendored unchanged from upstream. Licence text: LICENSE",
+  "repository": "https://github.com/mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "license": "MIT, Copyright (c) 2026 Matt Pocock",
+  "copied_from": "skills/productivity/handoff/SKILL.md -> SKILL.md; skills/productivity/handoff/agents/openai.yaml -> agents/openai.yaml",
+  "local_changes": []
+}

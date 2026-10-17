@@ -92,6 +92,7 @@ scripts go to `~/.local/share/chalk-skills/hooks/`, the lock to
 | -- | -- |
 | `experiments` | designing-experiments, laying-out-experiment-designs, testing-ideas-with-simulation, checking-a-derivation |
 | `docs` | diagramming-in-markdown |
+| `productivity` | handoff |
 
 ## Licence
 
