@@ -1,8 +1,10 @@
 {
-  "scope": "Vendored unchanged from upstream. Licence text: LICENSE",
+  "scope": "Copied from upstream with the local changes below. Licence text: LICENSE",
   "repository": "https://github.com/mattpocock/skills",
   "commit": "49dd158d1076134a641b33efb035946536778336",
   "license": "MIT, Copyright (c) 2026 Matt Pocock",
   "copied_from": "skills/engineering/retro/agents/openai.yaml -> agents/openai.yaml; skills/engineering/retro/SKILL.md -> SKILL.md",
-  "local_changes": []
+  "local_changes": [
+    "SKILL.md: step 1 and the Skills note no longer call the upstream writing-for-agents skill, which chalkworth does not ship; they use whatever writing guide the repo or the agent's skills provide"
+  ]
 }
