@@ -1,0 +1,20 @@
+{
+  "scope": "Copied from upstream with the local changes below. Licence text: LICENSE",
+  "repository": "https://github.com/cursor/plugins",
+  "commit": "dc415439eebed0cd8fddb11e896dee43bce9d8b0",
+  "license": "MIT, Copyright (c) 2026 Cursor",
+  "copied_from": "thermos/LICENSE -> LICENSE; thermos/skills/thermos/SKILL.md -> SKILL.md; thermos/skills/thermo-nuclear-review/SKILL.md -> references/review-rubric.md; thermos/skills/thermo-nuclear-code-quality-review/SKILL.md -> references/code-quality-rubric.md",
+  "local_changes": [
+    "SKILL.md: rewritten. It takes a range argument (A..B, or a base) instead of assuming main, and stops to ask for a base when origin/HEAD is not set.",
+    "SKILL.md: starts general-purpose subagents and points each at its rubric file, in place of Cursor's named Task subagents.",
+    "SKILL.md: the parent gathers only the diff stat and file list; reviewers fetch the diff file by file.",
+    "SKILL.md: adds a fixed finding format and an 'Incomplete:' first line when a reviewer fails, so a scheduled caller can tell a partial review apart.",
+    "references/review-rubric.md, references/code-quality-rubric.md: the two rubric skills are now reference files without frontmatter, so they can no longer be invoked on their own.",
+    "references/review-rubric.md: the PR discussion step uses gh only (not glab), names BugBot only as an example, and is skipped when gh is missing or no PR covers the range."
+  ],
+  "left_out": [
+    "thermos/.cursor-plugin/plugin.json, thermos/assets/logo.png: Cursor plugin packaging",
+    "thermos/README.md, thermos/CHANGELOG.md: describe the Cursor plugin",
+    "thermos/agents/*.md: wrappers for Cursor's Task subagents, replaced by step 3 of SKILL.md"
+  ]
+}
