@@ -83,6 +83,38 @@ To leave an AXI tool out of the session-start context in one repository, list it
 `.agents/axi-session.toml` at the repository root: `skip = ["lavish-axi"]`. The hook then doesn't
 run that tool.
 
+`hooks/test-nudge/` is a `PostToolUse` hook for Claude Code (`Write|Edit|MultiEdit|Bash`) and
+Codex (`apply_patch`). After an edit to a Python test file, it compares the file before and after
+the edit and looks only at the tests the edit added or changed. It tells the agent when one of
+them:
+
+- has the same body as another test apart from literals, in the same file or under the same name
+  in another test file, so it could be a parametrize row;
+- gains a sleep over 0.1 s, a raised timeout, a flaky or rerun marker, or an unconditional skip;
+- asserts on an English sentence of six words or more;
+- stacks parametrize axes into a cross product of eight cases or more.
+
+The note goes to the agent as `additionalContext` next to the tool result, at most two notes at
+a time. Each file and kind is reported once per session and agent, with at most four messages
+per session and agent. The hook never blocks and always exits 0. When it has nothing to say it
+prints nothing, which costs the agent no context. A `# test-nudge: ok` comment on or above a test
+silences it for that test, and `TEST_NUDGE=off` in the environment turns the hook off. It keeps
+its state in `$XDG_STATE_HOME/test-nudge/`.
+
+Two fields decide what the hook can see in Claude Code. If either is missing, the edits that
+depend on it go unchecked, and nothing is reported:
+
+- `tool_response.originalFile` holds the file's text before an Edit or Write. Claude Code sends
+  it, but the hooks reference does not document it. Without it, the hook compares the file on
+  disk with git's staged copy, and skips the file when git has no staged copy.
+- `tool_response.bashEditDiff` lists the files a Bash command changed (Claude Code 2.1.269 or
+  later, in public beta). Claude Code fills it in auto and `bypassPermissions` modes, and in every
+  mode when `"bashEditDiffEnabled": true` is set in the user's `~/.claude/settings.json`. Without
+  it, edits made through Bash (`sed -i`, `cat >`) are not checked.
+
+For Codex, the hook undoes the patch hunks on the file on disk to recover the text before the
+edit, and falls back to git's staged copy.
+
 Entries are merged. The tool owns an entry when its command string is in the lockfile, and
 leaves every other entry, key and the key order alone. Removing a hook from the config removes
 its entries, and any containers or files the tool created. With `hooks --global`, the hook ids and

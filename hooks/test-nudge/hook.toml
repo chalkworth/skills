@@ -1,0 +1,13 @@
+description = "After an edit to a Python test file, notes a duplicated test body, a new sleep, a raised timeout, a retry or skip marker, an assertion on a sentence, or a new parametrize cross product. Says nothing otherwise, and never blocks."
+script = "test_nudge.py"
+runner = "python3 -I"
+
+[claude]
+event = "PostToolUse"
+matcher = "Write|Edit|MultiEdit|Bash"
+timeout = 10
+
+[codex]
+event = "PostToolUse"
+matcher = "apply_patch"
+timeout = 10
