@@ -1,0 +1,15 @@
+{
+  "scope": "Written here from the upstream material. No upstream text is copied. Licence text: LICENSE, Apache-2.0, the same as this repository.",
+  "repository": "https://github.com/OpenRouterTeam/skills",
+  "commit": "33597a44e38b0cdc38ea1256ef8bcf50c2704e3d",
+  "license": "Apache-2.0 for this text. Upstream publishes no licence at this commit, and none of its text is included.",
+  "copied_from": "skills/create-agent-tui references tui.md, input-styles.md, tool-display.md, and loader.md: the prompt shapes, grouped activity, and the waiting mark, rewritten as rules for any terminal program",
+  "left_out": [
+    "@openrouter/agent, the tool catalogue, slash commands, session JSONL, the HTTP entry point, and the system prompt",
+    "ASCII-banner generation. A status pane skips a startup banner; SKILL.md says so once",
+    "The TypeScript implementations, the sample project, and the screenshots"
+  ],
+  "local_changes": [
+    "SKILL.md, references/chrome.md, references/activity.md, references/waiting-and-colour.md: new"
+  ]
+}

@@ -9,3 +9,6 @@ description = "Diagrams and documents in Markdown"
 
 [packs.productivity]
 description = "Working across sessions, such as handing a conversation over to a fresh agent"
+
+[packs.terminal]
+description = "Designing a terminal view: prompts, status, progress, colour, and width"
